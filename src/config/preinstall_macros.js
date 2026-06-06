@@ -3719,7 +3719,68 @@ export default {
       }
     ]
    },
-   
+
+  "XModules/DemoSetTargetWindow":
+  {
+    "CreationDate": "2026-06-06",
+    "Commands": [
+      {
+        "Command": "comment",
+        "Target": "Demo: setTargetWindow — 自動抓取視窗位置並鎖定 CV 搜尋範圍",
+        "Value": "",
+        "Description": "此命令會呼叫 XModules 取得指定視窗的座標，然後自動套用到後續所有 XClick / visionFind / OCR 命令"
+      },
+      {
+        "Command": "comment",
+        "Target": "Step 1: 鎖定視窗「仙境傳說RO」",
+        "Value": "",
+        "Description": "Target 填入視窗標題（完整或部分皆可，由 XModules 負責搜尋）"
+      },
+      {
+        "Command": "setTargetWindow",
+        "Target": "仙境傳說RO",
+        "Value": "",
+        "Description": "鎖定後，後續所有 CV 命令只在此視窗範圍內搜尋"
+      },
+      {
+        "Command": "echo",
+        "Target": "視窗已鎖定！後續 XClick / visionFind / OCR 皆只在「仙境傳說RO」視窗範圍內執行",
+        "Value": "",
+        "Description": ""
+      },
+      {
+        "Command": "comment",
+        "Target": "Step 2: 在此加入你的 XClick / visionFind / OCR 命令（示例：找尋遊戲內圖示）",
+        "Value": "",
+        "Description": "例如： XClick Target: 遊戲圖示.png"
+      },
+      {
+        "Command": "pause",
+        "Target": "2000",
+        "Value": "",
+        "Description": "暫停 2 秒（實際使用時請換成你的操作命令）"
+      },
+      {
+        "Command": "comment",
+        "Target": "Step 3: 完成後清除鎖定，回到全螢幕模式",
+        "Value": "",
+        "Description": "Target 留空代表清除視窗鎖定"
+      },
+      {
+        "Command": "setTargetWindow",
+        "Target": "",
+        "Value": "",
+        "Description": "清除鎖定，後續命令回到全螢幕搜尋"
+      },
+      {
+        "Command": "echo",
+        "Target": "視窗鎖定已清除，回到全螢幕模式",
+        "Value": "",
+        "Description": ""
+      }
+    ]
+  },
+
   "XModules_Desktop/DemoXDesktopAutomation":
   {
     "CreationDate": "2024-02-13",
