@@ -2786,7 +2786,7 @@ const runCommand = (command: any, index?: any, parentCommand?: any) => {
         .sanityCheck()
         .then(() => {
           store.dispatch(act.addLog('info', `setTargetWindow: calling find_rectangle, title="${windowTitle}"`))
-          return getNativeXYAPI().findRectangle(windowTitle)
+          return getNativeXYAPI().findRectangle({ window_title: windowTitle })
         })
         .then((rect) => {
           store.dispatch(act.addLog('info', `setTargetWindow: find_rectangle result=${JSON.stringify(rect)}`))
