@@ -2784,10 +2784,14 @@ const runCommand = (command: any, index?: any, parentCommand?: any) => {
 
       return getXUserIO()
         .sanityCheck()
-        .then(() => getNativeXYAPI().findRectangle({ title: windowTitle }))
+        .then(() => {
+          store.dispatch(act.addLog('info', `setTargetWindow: calling find_rectangle, title="${windowTitle}"`))
+          return getNativeXYAPI().findRectangle({ title: windowTitle })
+        })
         .then((rect) => {
+          store.dispatch(act.addLog('info', `setTargetWindow: find_rectangle result=${JSON.stringify(rect)}`))
           if (!rect || typeof rect.x !== 'number') {
-            throw new Error(`setTargetWindow: window "${windowTitle}" not found`)
+            throw new Error(`setTargetWindow: window "${windowTitle}" not found (result: ${JSON.stringify(rect)})`)
           }
 
           // 從螢幕座標換算成 CSS px（同 visionLimitSearchArea area= 的做法）
@@ -2814,7 +2818,8 @@ const runCommand = (command: any, index?: any, parentCommand?: any) => {
           return { byPass: true }
         })
         .catch((e) => {
-          throw new Error(`setTargetWindow: ${e.message}`)
+          const msg = e?.message || (typeof e === 'string' ? e : JSON.stringify(e))
+          throw new Error(`setTargetWindow: ${msg}`)
         })
     }
 
