@@ -71,6 +71,7 @@ import { getXUserIO } from '@/services/xmodules/x_user_io'
 import { getXFile } from '@/services/xmodules/xfile'
 import { getXLocal } from '@/services/xmodules/xlocal'
 import { getNativeXYAPI, MouseButton, MouseEventType } from '@/services/xy'
+import { getWin32API } from '@/services/win32'
 import { InterpreterInstance, PlayerInstance } from '@/init_player'
 import { getOcrResponse, guardOcrSettings } from '@/modules/ocr'
 import { store } from '@/redux'
@@ -2782,28 +2783,12 @@ const runCommand = (command: any, index?: any, parentCommand?: any) => {
         return Promise.resolve({ byPass: true })
       }
 
-      // 逐一試已知候選 key，找到正確的就停止
-      const tryFindRectangle = (keys: string[]): Promise<any> => {
-        if (keys.length === 0) return Promise.reject(new Error('find_rectangle: no valid param key found'))
-        const [key, ...rest] = keys
-        const params: any = {}
-        params[key] = windowTitle
-        store.dispatch(act.addLog('info', `setTargetWindow: trying find_rectangle({${key}: "${windowTitle}"})`))
-        return getNativeXYAPI().findRectangle(params).catch((e: any) => {
-          const msg: string = e?.message || JSON.stringify(e) || ''
-          // error 302 "is null" = key 不存在 → 試下一個
-          if (msg.includes('302') && msg.includes('null')) return tryFindRectangle(rest)
-          throw e
-        })
-      }
-
-      return getXUserIO()
-        .sanityCheck()
-        .then(() => tryFindRectangle(['text', 'name', 'title', 'window_title']))
+      // 用 Win32 API native host 取視窗 rect（find_rectangle 在 v1.0.31 有序列化 bug）
+      return getWin32API()
+        .getWindowRect(windowTitle)
         .then((rect) => {
-          store.dispatch(act.addLog('info', `setTargetWindow: find_rectangle result=${JSON.stringify(rect)}`))
           if (!rect || typeof rect.x !== 'number') {
-            throw new Error(`setTargetWindow: window "${windowTitle}" not found (result: ${JSON.stringify(rect)})`)
+            throw new Error(`setTargetWindow: window "${windowTitle}" not found`)
           }
 
           // 從螢幕座標換算成 CSS px（同 visionLimitSearchArea area= 的做法）

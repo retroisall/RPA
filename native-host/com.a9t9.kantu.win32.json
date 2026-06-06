@@ -1,0 +1,9 @@
+﻿{
+    "path":  "D:\\dev\\uivision\\native-host\\kantu-win32-host.bat",
+    "description":  "Kantu Win32 window rect helper",
+    "name":  "com.a9t9.kantu.win32",
+    "allowed_origins":  [
+                            "chrome-extension://jdjkjkebffohbenibnooolhimnhijode/"
+                        ],
+    "type":  "stdio"
+}
