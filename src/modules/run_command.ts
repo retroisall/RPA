@@ -2771,6 +2771,51 @@ const runCommand = (command: any, index?: any, parentCommand?: any) => {
       })
     }
 
+    case 'setTargetWindow': {
+      const windowTitle = (target || '').trim()
+
+      // 空 target → 清除，回到全螢幕
+      if (!windowTitle) {
+        vars.set({ '!visualSearchArea': 'full' }, true)
+        store.dispatch(act.addLog('info', 'setTargetWindow: cleared, back to full screen'))
+        return Promise.resolve({ byPass: true })
+      }
+
+      return getXUserIO()
+        .sanityCheck()
+        .then(() => getNativeXYAPI().findRectangle({ title: windowTitle }))
+        .then((rect) => {
+          if (!rect || typeof rect.x !== 'number') {
+            throw new Error(`setTargetWindow: window "${windowTitle}" not found`)
+          }
+
+          // 從螢幕座標換算成 CSS px（同 visionLimitSearchArea area= 的做法）
+          return getNativeXYAPI().getScalingFactor().then((factor) => ({
+            x:      rect.x      / factor,
+            y:      rect.y      / factor,
+            width:  rect.width  / factor,
+            height: rect.height / factor
+          }))
+        })
+        .then((cssRect) => {
+          vars.set({ '!visualSearchArea': 'rect' }, true)
+          return captureImage({
+            isDesktop: true,
+            storedImageRect: cssRect,
+            searchArea: 'rect',
+            scaleDpi: true,
+            devicePixelRatio: window.devicePixelRatio
+          })
+        })
+        .then(() => {
+          store.dispatch(act.addLog('info', `setTargetWindow: locked to "${windowTitle}"`))
+          return { byPass: true }
+        })
+        .catch((e) => {
+          throw new Error(`setTargetWindow: ${e.message}`)
+        })
+    }
+
     case 'visionLimitSearchArea':
     case 'visionLimitSearchAreaRelative': {
       const isRelative = /relative/i.test(cmd)
