@@ -95,7 +95,29 @@ export function searchVision(args: SearchVisionParams): Promise<SearchVisionResu
             .then(dataUrl => {
               return saveDataUrlToLastDesktopScreenshot(dataUrl)
               // Note: convert coordinates to CSS pixels
-              .then(() => convertImageSearchResultIfAllCoordiatesBasedOnTopLeftScreen(result, 1 / window.devicePixelRatio, searchAreaRect))
+              .then(() => {
+                const regions = convertImageSearchResultIfAllCoordiatesBasedOnTopLeftScreen(result, 1 / window.devicePixelRatio, searchAreaRect)
+
+                // limitSearchArea was disabled to prevent a CV host crash (it crashes when
+                // limitSearchArea + requireGreenPinkBoxes are both true).  Restore the
+                // window-scope constraint by discarding any matches whose anchor (green box)
+                // centre falls outside the stored window rect.
+                if (requireGreenPinkBoxes && !isFullScreenshot && searchAreaRect) {
+                  const s      = 1 / window.devicePixelRatio
+                  const left   = s * searchAreaRect.x
+                  const top    = s * searchAreaRect.y
+                  const right  = s * (searchAreaRect.x + searchAreaRect.width)
+                  const bottom = s * (searchAreaRect.y + searchAreaRect.height)
+                  return regions.filter(({ reference }) => {
+                    if (!reference) return true
+                    const cx = reference.viewportLeft + reference.width  / 2
+                    const cy = reference.viewportTop  + reference.height / 2
+                    return cx >= left && cx <= right && cy >= top && cy <= bottom
+                  })
+                }
+
+                return regions
+              })
             })
           })
         })
