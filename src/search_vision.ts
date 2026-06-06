@@ -74,17 +74,20 @@ export function searchVision(args: SearchVisionParams): Promise<SearchVisionResu
         .then(() => getPatternImage(visionFileName))
         .then(dataUrl => getNativeCVAPI().getImageFromDataUrl(dataUrl as string, patternDpi))
         .then(imageObj => {
+          // limitSearchArea + requireGreenPinkBoxes together crash the CV host;
+          // green/pink box images are visually distinct enough for full-desktop search
+          const limitSearchArea = !isFullScreenshot && !requireGreenPinkBoxes
           return getNativeCVAPI().searchDesktopWithGuard({
             pattern: imageObj,
             options: {
               minSimilarity,
               enableGreenPinkBoxes,
               requireGreenPinkBoxes,
-              searchArea:         searchAreaRect,
-              enableHighDpi:      true,
+              searchArea:      limitSearchArea ? searchAreaRect : undefined,
+              enableHighDpi:   true,
               allowSizeVariation: true,
               saveCaptureOnDisk:  true,
-              limitSearchArea:    !isFullScreenshot
+              limitSearchArea
             }
           })
           .then(result => {
@@ -113,6 +116,9 @@ export function searchVision(args: SearchVisionParams): Promise<SearchVisionResu
           const viewportOffset  = targetImageInfo.viewportOffset
           const patternImage    = await getNativeCVAPI().getImageFromDataUrl(patternImageUrl as string, patternDpi)
           const screenshotImage = await getNativeCVAPI().getImageFromDataUrl(targetImageUrl, patternDpi)
+          // limitSearchArea + requireGreenPinkBoxes together crash the CV host;
+          // same guard as desktop path
+          const limitSearchAreaBrowser = !isFullScreenshot && !requireGreenPinkBoxes
           const searchResult    = await getNativeCVAPI().searchImageWithGuard({
             image: screenshotImage,
             pattern: patternImage,
@@ -120,11 +126,11 @@ export function searchVision(args: SearchVisionParams): Promise<SearchVisionResu
               minSimilarity,
               enableGreenPinkBoxes,
               requireGreenPinkBoxes,
-              searchArea:         searchAreaRect,
+              searchArea:         limitSearchAreaBrowser ? searchAreaRect : undefined,
               enableHighDpi:      true,
               allowSizeVariation: true,
               saveCaptureOnDisk:  true,
-              limitSearchArea:    !isFullScreenshot
+              limitSearchArea:    limitSearchAreaBrowser
             }
           })
 
