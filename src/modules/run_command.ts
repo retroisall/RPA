@@ -3418,10 +3418,10 @@ const runCommand = (command: any, index?: any, parentCommand?: any) => {
             if (filePath && isJustFileName(filePath)) {
               return getStorageManager()
                 .getScreenshotStorage()
-                .overwrite(path, blob)
+                .overwrite(filePath, blob)
                 .then(() => {
                   store.dispatch(act.listScreenshots())
-                  store.dispatch(act.addLog('info', `視窗截圖（鎖定模式）已儲存至 '${path}'`))
+                  store.dispatch(act.addLog('info', `視窗截圖（鎖定模式）已儲存至 '${filePath}'`))
                 })
             } else {
               store.dispatch(act.addLog('info', '視窗截圖（鎖定模式）已擷取'))
