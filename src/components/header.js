@@ -1866,7 +1866,9 @@ class Header extends React.Component {
                   </div>
 
                   {/* 視窗鎖定模式 UI */}
-                  {this.props.config.cvScope === 'desktop' && (
+                  {this.props.config.cvScope === 'desktop' && (() => {
+                    const isPlayerRunning = this.props.player.status !== C.PLAYER_STATUS.STOPPED
+                    return (
                     <div className="row" style={{ marginTop: 16, padding: '10px 14px', background: '#f6f8fa', border: '1px solid #d9d9d9', borderRadius: 6 }}>
                       <div style={{ fontWeight: 500, marginBottom: 8 }}>
                         視窗鎖定模式 (Window Lock)
@@ -1878,6 +1880,8 @@ class Header extends React.Component {
                           </span>
                           <Button
                             size="small"
+                            disabled={isPlayerRunning}
+                            title={isPlayerRunning ? 'Macro 執行中，無法變更鎖定狀態' : ''}
                             onClick={() => {
                               clearWindowContext()
                               this.setState({ windowLockBounds: null })
@@ -1887,6 +1891,7 @@ class Header extends React.Component {
                           </Button>
                           <Button
                             size="small"
+                            disabled={isPlayerRunning}
                             onClick={() => this.setState({ showWindowLockPicker: true })}
                           >
                             重新框選
@@ -1908,7 +1913,8 @@ class Header extends React.Component {
                         鎖定後，截圖、視覺辨識、OCR 僅在選取範圍內執行。可用 setTargetWindow 指令程式化控制。
                       </div>
                     </div>
-                  )}
+                    )
+                  })()}
 
                   <p>
                     Inside a macro the computer vision scope can be changed with the{" "}

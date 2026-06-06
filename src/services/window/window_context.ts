@@ -20,7 +20,7 @@ export function clearWindowContext(): void {
 }
 
 export function getWindowContext(): WindowBounds | null {
-  return windowContext
+  return windowContext ? { ...windowContext } : null
 }
 
 // 將視窗鎖定範圍套用到 ImageSearchOptions，若未鎖定則原樣返回
@@ -34,6 +34,7 @@ export function applyWindowContext(options: KantuCV.ImageSearchOptions): KantuCV
 }
 
 // 用 Canvas API 將 DataURL 裁切到視窗邊界範圍
+// 注意：此函式需要 DOM 環境（panel/popup），不可在 service worker 中呼叫
 export function cropDataUrl(dataUrl: string, bounds: WindowBounds): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image()
