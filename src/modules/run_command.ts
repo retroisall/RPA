@@ -3390,11 +3390,11 @@ const runCommand = (command: any, index?: any, parentCommand?: any) => {
       const bounds = parseWindowBounds(rawTarget)
       if (bounds) {
         setWindowContext(bounds)
-        vars.set('!TARGETWINDOW', boundsToString(bounds))
+        vars.set({ '!TARGETWINDOW': boundsToString(bounds) })
         store.dispatch(act.addLog('info', `視窗鎖定：x=${bounds.x}, y=${bounds.y}, w=${bounds.width}, h=${bounds.height}`))
       } else {
         clearWindowContext()
-        vars.set('!TARGETWINDOW', '')
+        vars.set({ '!TARGETWINDOW': '' })
         store.dispatch(act.addLog('info', '視窗鎖定已解除'))
       }
       return Promise.resolve({ byPass: true })
