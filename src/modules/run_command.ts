@@ -55,6 +55,7 @@ import { getScreenshotInSearchArea, saveDataUrlToLastDesktopScreenshot, saveData
 import AnthropicService from '@/services/ai/anthropic/anthropic.service'
 // import { runComputerUseService } from '@/services/ai/computer_use/computer_use.service'
 import { getNativeCVAPI } from '@/services/desktop'
+import { applyWindowContext, clearWindowContext, cropDataUrl, getWindowContext, parseWindowBounds, setWindowContext, boundsToString } from '@/services/window/window_context'
 import { getNativeFileSystemAPI } from '@/services/filesystem'
 import { MacroResultStatus } from '@/services/kv_data/macro_extra_data'
 import { allWordsWithPosition, ocrMatchCenter, runDownloadLog, scaleOcrTextSearchMatch, searchTextInOCRResponse } from '@/services/ocr'
@@ -3383,11 +3384,52 @@ const runCommand = (command: any, index?: any, parentCommand?: any) => {
       const api = getNativeXYAPI()
       return runXMouseKeyboardCommand(command)
 
+    case 'setTargetWindow': {
+      // 格式：target 為 "x,y,w,h" 表示鎖定視窗；空字串表示解除鎖定
+      const rawTarget = (target || '').trim()
+      const bounds = parseWindowBounds(rawTarget)
+      if (bounds) {
+        setWindowContext(bounds)
+        vars.set('!TARGETWINDOW', boundsToString(bounds))
+        store.dispatch(act.addLog('info', `視窗鎖定：x=${bounds.x}, y=${bounds.y}, w=${bounds.width}, h=${bounds.height}`))
+      } else {
+        clearWindowContext()
+        vars.set('!TARGETWINDOW', '')
+        store.dispatch(act.addLog('info', '視窗鎖定已解除'))
+      }
+      return Promise.resolve({ byPass: true })
+    }
+
     case 'captureDesktopScreenshot': {
       const cvApi = getNativeCVAPI()
+      const lockedBounds = getWindowContext()
       const isJustFileName = (str) => !/[\\/]/.test(str)
       const path = target && target.trim()
       const filePath = path && path.length > 0 ? ensureExtName('.png', path) : undefined
+
+      if (lockedBounds) {
+        // 視窗鎖定模式：截全圖後裁切到視窗範圍
+        return cvApi
+          .captureDesktop({ path: undefined })
+          .then((actualPath) => cvApi.readFileAsDataURL(actualPath, true))
+          .then((dataUrl) => cropDataUrl(dataUrl, lockedBounds))
+          .then((croppedDataUrl) => {
+            const blob = dataURItoBlob(croppedDataUrl)
+            if (filePath && isJustFileName(filePath)) {
+              return getStorageManager()
+                .getScreenshotStorage()
+                .overwrite(path, blob)
+                .then(() => {
+                  store.dispatch(act.listScreenshots())
+                  store.dispatch(act.addLog('info', `視窗截圖（鎖定模式）已儲存至 '${path}'`))
+                })
+            } else {
+              store.dispatch(act.addLog('info', '視窗截圖（鎖定模式）已擷取'))
+            }
+          })
+          .then(() => ({ byPass: true }))
+      }
+
       const next =
         filePath && isJustFileName(filePath)
           ? (actualPath) => {
