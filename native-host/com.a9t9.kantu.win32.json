@@ -1,9 +1,27 @@
 ﻿{
-    "path":  "D:\\dev\\uivision\\native-host\\kantu-win32-host.exe",
-    "description":  "Kantu Win32 window rect helper",
     "name":  "com.a9t9.kantu.win32",
+    "description":  "Kantu Win32 window rect helper",
+    "path":  "D:\\dev\\uivision\\native-host\\kantu-win32-host.exe",
+    "type":  "stdio",
     "allowed_origins":  [
-                            "chrome-extension://jdjkjkebffohbenibnooolhiminijode/"
-                        ],
-    "type":  "stdio"
+                            "chrome-extension://dpdlhdbnlaefobeejcgfidghdllhemkl/",
+                            "chrome-extension://chfonhilonimekkjdiojngiemaajoele/",
+                            "chrome-extension://kknkjjhfadpnkmbdhmemjlklhhffkgal/",
+                            "chrome-extension://fffapfncphmnlbhgcmbkdhpbjfbjcfco/",
+                            "chrome-extension://gcbalfbdmfieckjlnblleoemohcganoc/",
+                            "chrome-extension://ngkbmimfhhaabikggkeidhgfgjddfidk/",
+                            "chrome-extension://mkplanokebelajeokbfnigdkhkefgdif/",
+                            "chrome-extension://eenjdnjldapjajjofmldgmkjaienebbj/",
+                            "chrome-extension://fpfipmndcbfnofbedjokcjlfogdpmcop/",
+                            "chrome-extension://ejfgcoabhgdgaafjeindjmegacbklcin/",
+                            "chrome-extension://cacjdaggjlpecjdbjgjmiphpkmoaijgg/",
+                            "chrome-extension://goapmjinbaeomoemgdcnnhoedopjnddd/",
+                            "chrome-extension://jlefpjinggjhccheobegboicdcacepfg/",
+                            "chrome-extension://hpoonbmpnckidjpkjlmnkhgnhabknlbi/",
+                            "chrome-extension://ankheondabfngkjomknppbpkjcdabdlg/",
+                            "chrome-extension://jojbdbfemceclndeblooholmmgeokafd/",
+                            "chrome-extension://nmiimijaeongfopoekkmbcnjogeeonkm/",
+                            "chrome-extension://mjnohhoofkffamdjmhjjhmbeigaidoap/",
+                            "chrome-extension://jdjkjkebffohbenibnooolhimnhijode/"
+                        ]
 }
