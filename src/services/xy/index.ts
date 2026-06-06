@@ -54,7 +54,7 @@ export interface NativeXYAPI {
   sendMouseWheelEvent:          (event: MouseWheelEvent) => Promise<boolean>;
   sendText:                     (param: { text: string }) => Promise<boolean>;
   getActiveBrowserOuterRect:    () => Promise<Rect>;
-  findRectangle:                (param: { name: string }) => Promise<Rect>;
+  findRectangle:                (param: { text: string }) => Promise<Rect>;
   getScreenBackingScaleFactor:  () => Promise<number>;
   getScalingFactor:             () => Promise<number>;
   reconnect:                    () => Promise<NativeXYAPI>;

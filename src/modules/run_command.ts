@@ -2782,12 +2782,24 @@ const runCommand = (command: any, index?: any, parentCommand?: any) => {
         return Promise.resolve({ byPass: true })
       }
 
+      // 逐一試已知候選 key，找到正確的就停止
+      const tryFindRectangle = (keys: string[]): Promise<any> => {
+        if (keys.length === 0) return Promise.reject(new Error('find_rectangle: no valid param key found'))
+        const [key, ...rest] = keys
+        const params: any = {}
+        params[key] = windowTitle
+        store.dispatch(act.addLog('info', `setTargetWindow: trying find_rectangle({${key}: "${windowTitle}"})`))
+        return getNativeXYAPI().findRectangle(params).catch((e: any) => {
+          const msg: string = e?.message || JSON.stringify(e) || ''
+          // error 302 "is null" = key 不存在 → 試下一個
+          if (msg.includes('302') && msg.includes('null')) return tryFindRectangle(rest)
+          throw e
+        })
+      }
+
       return getXUserIO()
         .sanityCheck()
-        .then(() => {
-          store.dispatch(act.addLog('info', `setTargetWindow: calling find_rectangle, title="${windowTitle}"`))
-          return getNativeXYAPI().findRectangle({ name: windowTitle })
-        })
+        .then(() => tryFindRectangle(['text', 'name', 'title', 'window_title']))
         .then((rect) => {
           store.dispatch(act.addLog('info', `setTargetWindow: find_rectangle result=${JSON.stringify(rect)}`))
           if (!rect || typeof rect.x !== 'number') {
