@@ -103,16 +103,47 @@ module.exports = {
     extensions: ['.tsx', '.ts', '.js', '.json'],
     alias: {
       '@': path.join(__dirname, 'src'),
-      '$': __dirname
+      '$': __dirname,
+      'stream/promises': path.join(__dirname, 'src', 'common', 'empty_module.js')
     },
     fallback: {
       buffer: require.resolve('buffer'),
       stream: require.resolve('stream-browserify'),
-      'process/browser': require.resolve('process/browser')
+      'process/browser': require.resolve('process/browser'),
+      fs: false,
+      path: false,
+      crypto: false,
+      child_process: false,
+      readline: false,
+      'node:fs': false,
+      'node:path': false,
+      'node:crypto': false,
+      'node:child_process': false,
+      'node:readline': false,
+      'node:stream': false,
+      'node:stream/promises': false,
+      'node:fs/promises': false,
+      'node:net': false,
+      'node:tls': false,
+      'node:http': false,
+      'node:https': false,
+      'node:zlib': false,
+      'node:url': false,
+      'stream/promises': false,
+      url: false,
+      util: false,
+      net: false,
+      tls: false,
+      http: false,
+      https: false,
+      zlib: false
     }
   },
   plugins: [
     // new BundleAnalyzerPlugin(), // uncomment and run build to see bundle size
+    new webpack.NormalModuleReplacementPlugin(/^node:/, (resource) => {
+      resource.request = resource.request.replace(/^node:/, '')
+    }),
     new webpack.ProvidePlugin({
       process: 'process/browser'
     }),
