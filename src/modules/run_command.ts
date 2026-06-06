@@ -2776,6 +2776,7 @@ const runCommand = (command: any, index?: any, parentCommand?: any) => {
 
       // 空 target → 清除，回到全螢幕
       if (!windowTitle) {
+        vars.set({ '!storedImageRect': null }, true)
         vars.set({ '!visualSearchArea': 'full' }, true)
         store.dispatch(act.addLog('info', 'setTargetWindow: cleared, back to full screen'))
         return Promise.resolve({ byPass: true })
@@ -2798,6 +2799,7 @@ const runCommand = (command: any, index?: any, parentCommand?: any) => {
           }))
         })
         .then((cssRect) => {
+          vars.set({ '!storedImageRect': cssRect }, true)
           vars.set({ '!visualSearchArea': 'rect' }, true)
           return captureImage({
             isDesktop: true,
