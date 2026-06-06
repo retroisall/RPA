@@ -4,7 +4,7 @@ const platform = Ext.isFirefox() ? 'firefox' : 'chrome'
 
 export default {
   preinstall: {
-    version: '5.8.8',
+    version: '5.8.9',
     macroFolder: '/Demo'
   },
   nativeMessaging: {
