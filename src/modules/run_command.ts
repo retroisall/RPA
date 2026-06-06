@@ -2791,13 +2791,14 @@ const runCommand = (command: any, index?: any, parentCommand?: any) => {
             throw new Error(`setTargetWindow: window "${windowTitle}" not found`)
           }
 
-          // 從螢幕座標換算成 CSS px（同 visionLimitSearchArea area= 的做法）
-          return getNativeXYAPI().getScalingFactor().then((factor) => ({
-            x:      rect.x      / factor,
-            y:      rect.y      / factor,
-            width:  rect.width  / factor,
-            height: rect.height / factor
-          }))
+          // Win32 DPI-unaware GetWindowRect 回傳 logical px，與 CSS px 相同（均為 physical / DPI_scale）
+          // 直接當 CSS px 存入，不需再除 scalingFactor（若除了，高 DPI 下會縮小座標）
+          return Promise.resolve({
+            x:      rect.x,
+            y:      rect.y,
+            width:  rect.width,
+            height: rect.height
+          })
         })
         .then((cssRect) => {
           vars.set({ '!storedImageRect': cssRect }, true)
