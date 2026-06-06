@@ -8,7 +8,6 @@ import { getState } from '@/ext/common/global_state'
 import { store } from '@/redux'
 import { getScreenshotInSearchArea, saveDataUrlToLastDesktopScreenshot, saveDataUrlToLastScreenshot } from '@/search_vision'
 import { getNativeCVAPI } from '@/services/desktop'
-import { cropDataUrl, getWindowContext } from '@/services/window/window_context'
 import * as C from '@/common/constant'
 import { getFileBufferFromScreenshotStorage } from '@/common/ai_vision'
 
@@ -125,15 +124,7 @@ export const captureImage = async (args: any) => {
 
   if (isDesktop) {
     const cvApi = getNativeCVAPI()
-    const lockedBounds = getWindowContext()
     const crop = (imgSrc: string) => {
-      // 若有視窗鎖定，優先裁切到視窗範圍
-      if (lockedBounds) {
-        return cropDataUrl(imgSrc, lockedBounds).then((dataUrl) => ({
-          dataUrl,
-          offset: { x: lockedBounds.x, y: lockedBounds.y }
-        }))
-      }
       switch (searchArea) {
         case 'rect': {
           if (!storedImageRect) {
@@ -157,7 +148,7 @@ export const captureImage = async (args: any) => {
         }
       }
     }
-
+    
     return cvApi
       .captureDesktop({ path: undefined })
       .then((hardDrivePath) => cvApi.readFileAsDataURL(hardDrivePath, true))

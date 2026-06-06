@@ -967,7 +967,6 @@ export function commonPlayerState (state, options, macroId, macroName) {
     '!TIMEOUT_DOWNLOAD':  parseFloat(config.timeoutDownload),
     '!OCRLANGUAGE':       config.ocrLanguage,
     '!CVSCOPE':           config.cvScope,
-    '!TARGETWINDOW':      '',
     '!REPLAYSPEED': ({
       '0':    'FASTV1',
       '0':    'FAST',

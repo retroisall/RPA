@@ -41,7 +41,6 @@ export const commandScopes = {
     'selectWindow': CommandScope.WebOnly,
     'captureScreenshot': CommandScope.WebOnly,
     'captureDesktopScreenshot': CommandScope.DesktopOnly,
-    'setTargetWindow': CommandScope.DesktopOnly,
     'refresh': CommandScope.WebOnly,
     'assert': CommandScope.All,
     'assertElementPresent': CommandScope.WebOnly,

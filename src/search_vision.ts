@@ -4,7 +4,6 @@ import { activateTab } from './common/tab_utils'
 import { getStorageManager } from './services/storage'
 import { getXDesktop } from './services/xmodules/xdesktop'
 import { getNativeCVAPI, convertImageSearchResultIfAllCoordiatesBasedOnTopLeftScreen, convertImageSearchResultForPage, ConvertResultItem } from './services/desktop'
-import { applyWindowContext } from './services/window/window_context'
 import { DesktopScreenshot } from './desktop_screenshot_editor/types'
 import { PageInfo, CaptureScreenshotService, scaleDataURI } from './common/capture_screenshot'
 import { Rect, Point } from './common/types'
@@ -77,7 +76,7 @@ export function searchVision(args: SearchVisionParams): Promise<SearchVisionResu
         .then(imageObj => {
           return getNativeCVAPI().searchDesktopWithGuard({
             pattern: imageObj,
-            options: applyWindowContext({
+            options: {
               minSimilarity,
               enableGreenPinkBoxes,
               requireGreenPinkBoxes,
@@ -86,7 +85,7 @@ export function searchVision(args: SearchVisionParams): Promise<SearchVisionResu
               allowSizeVariation: true,
               saveCaptureOnDisk:  true,
               limitSearchArea:    !isFullScreenshot
-            })
+            }
           })
           .then(result => {
             return getNativeCVAPI().readFileAsDataURL(result.capturePath!, true)

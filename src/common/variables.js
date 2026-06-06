@@ -174,7 +174,6 @@ export default function varsFactory (name = DEFAULT_KEY, options = {}, initial =
               key !== '!PROXY_EXEC_COUNT' &&
               key !== '!GLOBAL_TESTSUITE_STOP_ON_ERROR' &&
               key !== '!LAST_DOWNLOADED_FILE_NAME' &&
-              key !== '!TARGETWINDOW' &&
               !/^!COL\d+$/i.test(key)
     },
     readonly: [
