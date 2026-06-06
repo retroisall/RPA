@@ -67,6 +67,11 @@ export default function WindowLockPicker({ onConfirm, onCancel, devicePixelRatio
 
   const onMouseDown = (e) => {
     e.preventDefault()
+    // 每次開始拖曳時重算圖片顯示位置，防止 resize 後座標偏移
+    if (imgRef.current) {
+      const rect = imgRef.current.getBoundingClientRect()
+      setImgDisplayRect({ x: rect.left, y: rect.top, width: rect.width, height: rect.height })
+    }
     const pos = getClientPos(e)
     setDragging(true)
     setStartPt(pos)
@@ -120,13 +125,23 @@ export default function WindowLockPicker({ onConfirm, onCancel, devicePixelRatio
       message.warning('請先框選要鎖定的視窗範圍')
       return
     }
+    if (lockedRect.width < 10 || lockedRect.height < 10) {
+      message.warning('框選範圍太小，請重新框選')
+      return
+    }
     const topLeft = toScreenCoords(lockedRect.x, lockedRect.y)
     const botRight = toScreenCoords(lockedRect.x + lockedRect.width, lockedRect.y + lockedRect.height)
+    const screenWidth = botRight.x - topLeft.x
+    const screenHeight = botRight.y - topLeft.y
+    if (screenWidth < 10 || screenHeight < 10) {
+      message.warning('框選範圍換算後尺寸過小，請重新框選')
+      return
+    }
     onConfirm({
       x: topLeft.x,
       y: topLeft.y,
-      width: botRight.x - topLeft.x,
-      height: botRight.y - topLeft.y,
+      width: screenWidth,
+      height: screenHeight,
     })
   }
 
