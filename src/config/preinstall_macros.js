@@ -3755,6 +3755,24 @@ export default {
         "Description": "例如： XClick Target: 遊戲圖示.png"
       },
       {
+        "Command": "comment",
+        "Target": "setTargetWindow 模式專用截圖與 OCR — 以下兩個指令只在已鎖定的視窗範圍內運作",
+        "Value": "",
+        "Description": "captureTargetWindowScreenshot：截取鎖定視窗範圍並存入 Screenshots 儲存區；OCRSearchInTargetWindow：在鎖定視窗範圍做 OCR，繞過全域 !visualSearchArea"
+      },
+      {
+        "Command": "captureTargetWindowScreenshot",
+        "Target": "target_window.png",
+        "Value": "",
+        "Description": "截取已鎖定視窗的畫面，存入 Screenshots 儲存區"
+      },
+      {
+        "Command": "OCRSearchInTargetWindow",
+        "Target": "Hello",
+        "Value": "ocrResult",
+        "Description": "在已鎖定視窗範圍內做 OCR 搜尋，繞過全域 !visualSearchArea"
+      },
+      {
         "Command": "pause",
         "Target": "2000",
         "Value": "",

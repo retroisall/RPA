@@ -90,6 +90,15 @@ const captureScreenshotService = new CaptureScreenshotService({
   captureVisibleTab: (windowId, options) => csIpc.ask('PANEL_CAPTURE_VISIBLE_TAB', { windowId, options })
 })
 
+// 取得已鎖定的目標視窗矩形，若尚未設定則立即拋出明確錯誤
+function getRequiredTargetWindowRect(vars: any, commandName: string): any {
+  const rect = vars.get('!storedImageRect')
+  if (!rect) {
+    throw new Error(`${commandName}: no target window set. Call setTargetWindow first.`)
+  }
+  return rect
+}
+
 export const askBackgroundToRunCommand = async ({
   command,
   state,
@@ -1862,6 +1871,193 @@ const runCommand = (command: any, index?: any, parentCommand?: any) => {
       }
     }
 
+    case 'OCRSearchInTargetWindow': {
+      // 在鎖定視窗範圍做 OCR，繞過全域 !visualSearchArea
+      guardOcrSettings({ store })
+
+      if (!value || !value.length) {
+        throw new Error('value is required')
+      }
+
+      // 讀取鎖定視窗範圍，若未設定則立刻拋出
+      const ocrInTargetRect = getRequiredTargetWindowRect(vars, 'OCRSearchInTargetWindow')
+
+      const curent_cmd_ocr_target = localStorage.curent_cmd
+      const lang_ocr_target = vars.get('!ocrLanguage').toLowerCase()
+      const engine_ocr_target = vars.get('!ocrEngine') || store.getState().config.ocrEngine
+      const scale_ocr_target = vars.get('!ocrScale')
+      const isTable_ocr_target = vars.get('!ocrTableExtraction')
+      const timeout_ocr_target = vars.get('!TIMEOUT_WAIT') * 1000
+      const ocrApiTimeout_ocr_target = config.ocr.apiTimeout
+      const [str_ocr_target, index_ocr_target, hasPos_ocr_target] = (() => {
+        let match = target.match(/^(.+)@POS=(\d+)$/i)
+        if (!match) return [target, 0, false]
+        return [match[1], parseInt(match[2]) - 1, true]
+      })()
+      const isLog_ocr_target = command.mode_type != undefined && command.mode_type == 'local' ? 'NA' : true
+
+      const run_ocr_target = () => {
+        return getOcrResponse({
+          store,
+          lang: lang_ocr_target,
+          scale: scale_ocr_target,
+          engine: engine_ocr_target,
+          isTable: isTable_ocr_target,
+          // 硬編碼 'rect' 並直接傳入鎖定視窗的 rect，繞過 !visualSearchArea
+          searchArea: 'rect',
+          storedImageRect: ocrInTargetRect,
+          ocrApiTimeout: ocrApiTimeout_ocr_target,
+          isDesktop: isCVTypeForDesktop(vars.get('!CVSCOPE')),
+          isLog: isLog_ocr_target
+        }).then(async ({ response, offset, viewportOffset }: any) => {
+          console.log('OCRSearchInTargetWindow getOcrResponse response :>> ', response)
+
+          const viewportBasedParseResults = safeUpdateIn(
+            ['[]', 'TextOverlay', 'Lines', '[]', 'Words', '[]'],
+            (word: any) => ({
+              ...word,
+              Top: word.Top + viewportOffset.y,
+              Left: word.Left + viewportOffset.x
+            }),
+            response.ParsedResults
+          )
+          const documentBasedParseResults = safeUpdateIn(
+            ['[]', 'TextOverlay', 'Lines', '[]', 'Words', '[]'],
+            (word: any) => ({
+              ...word,
+              Top: word.Top + offset.y,
+              Left: word.Left + offset.x
+            }),
+            response.ParsedResults
+          )
+          const searchResult = searchTextInOCRResponse({
+            text: str_ocr_target,
+            index: index_ocr_target,
+            exhaust: true,
+            parsedResults: viewportBasedParseResults
+          })
+          const { hit, all } = searchResult
+
+          if (command.mode_type != undefined && command.mode_type == 'local' && command.extra && command.extra.throwError != true) {
+            if (searchResult.all.length == 0) {
+              throw new Error(`E311: OCR text match for '${str_ocr_target}' not found`)
+            }
+          }
+
+          const newVars_ocr_target = (() => {
+            if (!hit) {
+              return {
+                [value]: 0,
+                '!ocrx': 0,
+                '!ocry': 0,
+                '!ocrwidth': 0,
+                '!ocrheight': 0,
+                '!ocr_left_x': 0,
+                '!ocr_right_x': 0
+              }
+            } else {
+              const center = ocrMatchCenter(hit)
+              vars.set(
+                {
+                  '!ocrx': center.x,
+                  '!ocry': center.y,
+                  '!ocrwidth': center.width,
+                  '!ocrheight': center.height,
+                  '!ocr_left_x': center.x - center.width / 2,
+                  '!ocr_right_x': center.x + center.width / 2
+                },
+                true
+              )
+              return {
+                [value]: hasPos_ocr_target ? 1 : all.length,
+                '!ocrx': center.x,
+                '!ocry': center.y,
+                '!ocrwidth': center.width,
+                '!ocrheight': center.height,
+                '!ocr_left_x': center.x - center.width / 2,
+                '!ocr_right_x': center.x + center.width / 2
+              }
+            }
+          })()
+
+          const textHasWildcard_ocr_target = str_ocr_target.includes('*') || str_ocr_target.includes('?')
+
+          const ocrMatches_ocr_target = [
+            {
+              similarity: 1,
+              highlight: OcrHighlightType.Identified,
+              words: allWordsWithPosition(
+                documentBasedParseResults,
+                flatten(all.map((item: any) => item.words.map((word: any) => word.position)))
+              )
+            },
+            ...compose(
+              all[index_ocr_target]
+                ? setIn([index_ocr_target, 'highlight'], textHasWildcard_ocr_target ? OcrHighlightType.WildcardTopMatched : OcrHighlightType.TopMatched)
+                : (x: any) => x,
+              setIn(['[]', 'highlight'], textHasWildcard_ocr_target ? OcrHighlightType.WildcardMatched : OcrHighlightType.Matched),
+              updateIn(['[]', 'words', '[]', 'word'], (word: any) => ({
+                ...word,
+                Top: word.Top + offset.y - viewportOffset.y,
+                Left: word.Left + offset.x + viewportOffset.x
+              }))
+            )(all)
+          ]
+
+          if (
+            extra &&
+            extra.debugVisual &&
+            curent_cmd_ocr_target != 'OCRExtractbyTextRelative' &&
+            curent_cmd_ocr_target != 'visionLimitSearchAreabyTextRelative'
+          ) {
+            csIpc.ask('PANEL_HIGHLIGHT_OCR_MATCHES', {
+              ocrMatches: ocrMatches_ocr_target,
+              isDesktop: isCVTypeForDesktop(vars.get('!CVSCOPE')),
+              screenAvailableSize: {
+                width: screen.availWidth,
+                height: screen.availHeight
+              },
+              localStorage: cloneSerializableLocalStorage(localStorage)
+            })
+          } else {
+            localStorage.setItem('ocrMatches_preview', JSON.stringify(ocrMatches_ocr_target))
+          }
+
+          const pScaleFactor_ocr_target = isCVTypeForDesktop(vars.get('!CVSCOPE')) ? getNativeXYAPI().getScalingFactor() : Promise.resolve(1)
+
+          return pScaleFactor_ocr_target.then((factor) => {
+            return compose(
+              newVars_ocr_target['!ocrx'] === undefined ? id : safeUpdateIn(['vars', '!ocrx'], (n: any) => n * factor),
+              newVars_ocr_target['!ocry'] === undefined ? id : safeUpdateIn(['vars', '!ocry'], (n: any) => n * factor),
+              safeUpdateIn(['best'], (match: any) => (match && match.similarity ? scaleOcrTextSearchMatch(match, factor) : null))
+            )({
+              vars: newVars_ocr_target,
+              byPass: true,
+              best: hit
+            })
+          })
+        })
+      }
+
+      const runWithRetry_ocr_target = retry(run_ocr_target, {
+        timeout: timeout_ocr_target,
+        shouldRetry: (e) => {
+          return store.getState().status === C.APP_STATUS.PLAYER && /OCR.*\ not found/.test(e.message)
+        },
+        retryInterval: (retryCount, lastRetryInterval) => {
+          return 0.5 + 0.25 * retryCount
+        },
+        onFirstFail: () => {
+          startSendingTimeoutStatus(timeout_ocr_target, 'Vision waiting')
+        },
+        onFinal: () => {
+          clearTimerForTimeoutStatus()
+        }
+      })
+
+      return runWithRetry_ocr_target()
+    }
+
     case 'aiPrompt': {
       console.log('aiPrompt...')
 
@@ -3460,6 +3656,39 @@ const runCommand = (command: any, index?: any, parentCommand?: any) => {
         .then(() => ({
           byPass: true
         }))
+    }
+
+    case 'captureTargetWindowScreenshot': {
+      // 驗證 target（檔名）不含路徑分隔符
+      const rawFilename = (target || '').trim()
+      if (rawFilename && /[/\\]/.test(rawFilename)) {
+        throw new Error('captureTargetWindowScreenshot: path separators not allowed. Use a plain filename.')
+      }
+      const filename = ensureExtName('.png', rawFilename.length > 0 ? rawFilename : 'target_window.png')
+
+      // 讀取鎖定視窗範圍，若未設定則立刻拋出
+      const storedImageRectForCapture = getRequiredTargetWindowRect(vars, 'captureTargetWindowScreenshot')
+
+      // 截取視窗範圍（先截整個桌面再 crop 至 storedImageRect），存入 Screenshots 儲存區
+      return captureImage({
+        isDesktop: true,
+        searchArea: 'rect',
+        storedImageRect: storedImageRectForCapture,
+        scaleDpi: true,
+        devicePixelRatio: window.devicePixelRatio
+      }).then(({ dataUrl }: { dataUrl: string }) => {
+        const blob = dataURItoBlob(dataUrl)
+        return getStorageManager()
+          .getScreenshotStorage()
+          .overwrite(filename, blob)
+          .then(() => {
+            store.dispatch(act.listScreenshots())
+            return {
+              byPass: true,
+              log: `target window screenshot saved as '${filename}'`
+            }
+          })
+      })
     }
 
     case 'captureScreenshot': {

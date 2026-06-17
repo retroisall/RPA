@@ -9,10 +9,23 @@
   - 修正 allowed_origins extension ID 錯誤
   - 修正 DPI 座標換算 bug（Win32 DPI-unaware 回傳 logical px = CSS px，不需除 scalingFactor）
   - E2E 測試 5/5 通過
+- [x] `captureTargetWindowScreenshot` — 截取鎖定視窗範圍存入 Screenshots 儲存區
+  - 新增至 `command.ts`（`CommandScope.DesktopOnly`）
+  - 實作於 `run_command.ts`：先截整個桌面再 crop 至 `!storedImageRect`，存入 Screenshots storage
+  - 未呼叫 setTargetWindow 時立刻拋出清楚錯誤（`getRequiredTargetWindowRect` helper）
+  - 加入 DemoSetTargetWindow preinstall macro 示例
+- [x] `OCRSearchInTargetWindow` — 在鎖定視窗範圍做 OCR，繞過全域 `!visualSearchArea`
+  - 新增至 `command.ts`（`CommandScope.DesktopOnly`）
+  - 完整鏡像 OCRSearch 邏輯，但硬編碼 `searchArea: 'rect'` 並直接傳入 `storedImageRect`
+  - 未呼叫 setTargetWindow 時立刻拋出清楚錯誤
+  - 加入 DemoSetTargetWindow preinstall macro 示例
+  - E2E fail-fast 測試 STEP-9/STEP-10 新增
 
 ## 已知問題
 
 - 背景模式（視窗被遮擋時仍能辨識點擊）：需要 Windows Graphics Capture API，複雜度高，暫緩
+- **`OCRSearch` Value 欄位未做 editor 層驗證**：Value 空白時 runtime 才報錯，應在儲存或執行前提早攔截
+- **OCR 實際功能未被 E2E 測試覆蓋**：現有 STEP-6/7/8/9/10 只驗證結構與不崩潰，沒有驗證 OCR 真正找到文字（需 Win32 native host + 實際畫面）
 
 ## 暫緩
 
