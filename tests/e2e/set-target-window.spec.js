@@ -340,107 +340,87 @@ test('STEP-8: running setTargetWindow + OCRSearch does not crash the extension',
   }
 })
 
+// ─── helper：觸發 fail-fast guard 並從 Redux logs 驗證 'no target window set' 錯誤 ──
+// 原理：
+//   1. window.store 由 src/index.js 掛在 window 上
+//   2. window.__uivision_test_fail_fast__ 由 src/index.js 暴露，供測試使用
+//   3. 與 run_command.ts 的 getRequiredTargetWindowRect 邏輯完全相同：
+//      讀 vars.get('!storedImageRect')（初始狀態為 null）→ dispatch addLog('error', ...)
+//   4. 純 JS，不需要 Win32 native host
+async function triggerFailFastAndCheckLog (page, commandName, screenshotName) {
+  const result = await page.evaluate((cmdName) => {
+    const store = window.__store || window.store
+    if (!store) return { ok: false, reason: 'no store on window' }
+
+    const testFailFast = window.__uivision_test_fail_fast__
+    if (typeof testFailFast !== 'function') {
+      return { ok: false, reason: 'window.__uivision_test_fail_fast__ not found (dist rebuild needed)' }
+    }
+
+    // 清除舊 logs，確保只看這次觸發產生的項目
+    store.dispatch({ type: 'CLEAR_LOGS' })
+
+    // 觸發 fail-fast guard（同步，立刻 dispatch error log）
+    const guardResult = testFailFast(cmdName)
+
+    // 讀 Redux state.logs 找 error
+    const logs = store.getState().logs || []
+    const errorLog = logs.find(l =>
+      l.type === 'error' && l.text && l.text.includes('no target window set')
+    ) || null
+
+    return {
+      ok: true,
+      triggered: guardResult.triggered,
+      guardMsg: guardResult.msg,
+      errorLog: errorLog ? { type: errorLog.type, text: errorLog.text } : null
+    }
+  }, commandName)
+
+  await page.screenshot({ path: `tests/e2e/screenshots/${screenshotName}.png` })
+  console.log(`  result: ${JSON.stringify(result)}`)
+  return result
+}
+
 // STEP-9: captureTargetWindowScreenshot 未鎖定時立刻報錯
-// 驗證：未呼叫 setTargetWindow 就執行 captureTargetWindowScreenshot，log 中出現 'no target window set'
+// 驗證：未呼叫 setTargetWindow 就觸發 captureTargetWindowScreenshot，Redux log 出現 'no target window set'
 test('STEP-9: captureTargetWindowScreenshot without setTargetWindow throws clear error', async () => {
   const ctx = await launchWithExtension()
   try {
     const page = await openExtensionPopup(ctx)
     await acceptDemoDialog(page)
 
-    // 開啟 DemoSetTargetWindow（內含 captureTargetWindowScreenshot），找到並點選
-    const macroItem = page.locator('text=DemoSetTargetWindow')
-    await macroItem.click({ timeout: 10000 })
-    await page.waitForTimeout(1000)
+    const result = await triggerFailFastAndCheckLog(page, 'captureTargetWindowScreenshot', 'step9-capture-no-lock')
 
-    // 透過 page.evaluate 直接注入一個只含 captureTargetWindowScreenshot（沒有先 setTargetWindow）的 macro
-    // 並嘗試透過 Redux store dispatch 設定為當前 macro
-    const injectResult = await page.evaluate(async () => {
-      const store = window.__store || window.store
-      if (!store) return { ok: false, reason: 'no store' }
+    expect(result.ok).toBe(true)
+    expect(result.triggered).toBe(true)
+    expect(result.errorLog).not.toBeNull()
+    expect(result.errorLog.type).toBe('error')
+    expect(result.errorLog.text).toContain('no target window set')
 
-      try {
-        // 清除 !storedImageRect（確保鎖定狀態不存在）
-        if (store.dispatch && typeof store.dispatch === 'function') {
-          // 確認 store 存在，後續只需驗證 extension 回應
-          return { ok: true, storeFound: true }
-        }
-        return { ok: false, reason: 'dispatch not found' }
-      } catch (e) {
-        return { ok: false, reason: String(e) }
-      }
-    }).catch(() => ({ ok: false, reason: 'evaluate error' }))
-
-    console.log('STEP-9 inject result:', JSON.stringify(injectResult))
-
-    // 找執行按鈕
-    const playBtn = page.locator('button', { hasText: 'Play Macro' })
-    const hasPlayBtn = await playBtn.isVisible().catch(() => false)
-
-    if (!hasPlayBtn) {
-      console.log('SKIP: "Play Macro" button not found, marking STEP-9 as informational')
-      await page.screenshot({ path: 'tests/e2e/screenshots/step9-no-play-btn.png' })
-
-      // 即使無法執行，也驗證 command 已登記（command.ts 有正確定義）
-      // 透過 UI 搜尋框確認指令名稱能被 extension 接受
-      const searchInput = page.locator('input[placeholder*="search"], input[placeholder*="Search"], input[placeholder*="filter"]').first()
-      const hasSearch = await searchInput.isVisible().catch(() => false)
-      if (hasSearch) {
-        await searchInput.fill('captureTargetWindowScreenshot')
-        await page.waitForTimeout(500)
-        await page.screenshot({ path: 'tests/e2e/screenshots/step9-cmd-search.png' })
-      }
-      console.log('PASS (informational): captureTargetWindowScreenshot registered in command list')
-      return
-    }
-
-    await playBtn.click()
-    await page.waitForTimeout(3000)
-
-    await page.screenshot({ path: 'tests/e2e/screenshots/step9-capture-no-lock.png' })
-
-    // 驗證 extension 未崩潰
-    await expect(page.locator('body')).toBeVisible()
-    const bodyText = await page.locator('body').innerText().catch(() => '')
-    expect(bodyText.length).toBeGreaterThan(0)
-
-    console.log('PASS: captureTargetWindowScreenshot fail-fast verified (extension remained responsive)')
+    console.log('PASS: captureTargetWindowScreenshot fail-fast verified via Redux logs')
   } finally {
     await ctx.close()
   }
 })
 
 // STEP-10: OCRSearchInTargetWindow 未鎖定時立刻報錯
-// 驗證：未呼叫 setTargetWindow 就執行 OCRSearchInTargetWindow，extension 不崩潰且給出可辨識錯誤
+// 驗證：未呼叫 setTargetWindow 就觸發 OCRSearchInTargetWindow，Redux log 出現 'no target window set'
 test('STEP-10: OCRSearchInTargetWindow without setTargetWindow throws clear error', async () => {
   const ctx = await launchWithExtension()
   try {
     const page = await openExtensionPopup(ctx)
     await acceptDemoDialog(page)
 
-    // 開啟 DemoSetTargetWindow（內含 OCRSearchInTargetWindow）
-    const macroItem = page.locator('text=DemoSetTargetWindow')
-    await macroItem.click({ timeout: 10000 })
-    await page.waitForTimeout(1000)
+    const result = await triggerFailFastAndCheckLog(page, 'OCRSearchInTargetWindow', 'step10-ocr-no-lock')
 
-    // 確認 OCRSearchInTargetWindow 指令出現在 macro 中（preinstall_macros.js 已加入）
-    const ocrTargetCmd = page.locator('text=OCRSearchInTargetWindow').first()
-    const cmdVisible = await ocrTargetCmd.isVisible({ timeout: 5000 }).catch(() => false)
+    expect(result.ok).toBe(true)
+    expect(result.triggered).toBe(true)
+    expect(result.errorLog).not.toBeNull()
+    expect(result.errorLog.type).toBe('error')
+    expect(result.errorLog.text).toContain('no target window set')
 
-    if (cmdVisible) {
-      console.log('PASS: OCRSearchInTargetWindow command found in DemoSetTargetWindow macro')
-    } else {
-      console.log('INFO: OCRSearchInTargetWindow not visible in current view (may need scroll or reload)')
-    }
-
-    await page.screenshot({ path: 'tests/e2e/screenshots/step10-ocr-no-lock.png' })
-
-    // 驗證 extension 未崩潰
-    await expect(page.locator('body')).toBeVisible()
-    const bodyText = await page.locator('body').innerText().catch(() => '')
-    expect(bodyText.length).toBeGreaterThan(0)
-
-    console.log('PASS: OCRSearchInTargetWindow fail-fast verified (extension remained responsive)')
+    console.log('PASS: OCRSearchInTargetWindow fail-fast verified via Redux logs')
   } finally {
     await ctx.close()
   }

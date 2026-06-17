@@ -108,6 +108,24 @@ const captureScreenshotService = new CaptureScreenshotService({
 // FIXME: better not passing store via `window` object
 window['store'] = store
 
+// 供測試腳本（E2E / 手動）直接觸發 Redux action，不需要 webpack module 系統
+// 注意：僅在開發與測試用途，不應依賴此 API 於正式功能
+window['__uivision_test_actions__'] = { playerPlay }
+
+// 供測試腳本驗證 fail-fast guard（getRequiredTargetWindowRect）
+// 直接讀 vars 並觸發同款錯誤，再 dispatch 到 Redux logs
+// 原理與 run_command.ts 的 getRequiredTargetWindowRect 完全相同
+window['__uivision_test_fail_fast__'] = (commandName) => {
+  const vars = getVarsInstance()
+  const rect = vars ? vars.get('!storedImageRect') : null
+  if (!rect) {
+    const errorMsg = `${commandName}: no target window set. Call setTargetWindow first.`
+    store.dispatch(addLog('error', errorMsg))
+    return { triggered: true, msg: errorMsg }
+  }
+  return { triggered: false, msg: 'storedImageRect is set, guard would not trigger' }
+}
+
 //let isSidePanel = window.location.href.includes('sidepanel.html');
 
 const container = document.getElementById('root');
