@@ -2,6 +2,10 @@
 
 ## 進行中
 
+- [ ] 補 `.gitignore` 排除工具產生的暫存目錄：`.gstack/`、`.playwright-mcp/`、
+      `test-results/`、`tests/e2e/screenshots/`。這 4 個是執行測試時自動生成的，
+      不是資產，現在會一直出現在 `git status` 讓真正的改動被淹沒（2026-08-13 盤點發現）
+
 ## 已完成
 
 - [x] `setTargetWindow` 指令 — 用 Win32 native host 鎖定 CV 搜尋範圍到指定視窗
